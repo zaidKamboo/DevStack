@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cloudinary = require("../../config/cloudinary.config");
 const GithubProfileModel = require("../models/GithubProfile.model");
+const { getPublicIdFromUrl, log } = require("../utils/index.utils");
 
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -142,21 +143,30 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, github_username } = req.body;
-
-    if (!name && !github_username && !req.file)
-      return res.status(400).json({
-        success: false,
-        message: "No data provided to update",
-      });
+    const { name, github_username } = req.body || {};
 
     const user = await User.findById(req.user._id);
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
     let updateData = {};
 
-    if (name) updateData.name = name;
+    // ✅ NAME UPDATE
+    if (typeof name === "string" && name.trim() !== "") {
+      updateData.name = name.trim();
+    }
 
-    if (github_username && github_username !== user.github_username) {
+    // 🔥 GITHUB USERNAME UPDATE
+    if (
+      typeof github_username === "string" &&
+      github_username.trim() !== "" &&
+      github_username !== user.github_username
+    ) {
       try {
         const profileData = await fetchUserProfile(github_username);
         const reposData = await fetchUserRepos(github_username);
@@ -170,7 +180,7 @@ exports.updateProfile = async (req, res) => {
             profile_url: profileData.html_url,
             last_fetched: new Date(),
           },
-          { new: true, upsert: true }
+          { upsert: true, returnDocument: "after" } // 🔥 fix
         );
 
         await Repository.deleteMany({
@@ -198,40 +208,35 @@ exports.updateProfile = async (req, res) => {
       }
     }
 
+    // 🖼️ IMAGE UPDATE
     if (req.file) {
       if (user.profile_image) {
         try {
-          const publicId = user.profile_image
-            .split("/")
-            .slice(-3)
-            .join("/")
-            .split(".")
-            .slice(0, -1)
-            .join(".");
+          const publicId = getPublicIdFromUrl(user.profile_image);
 
           console.log("Deleting from Cloudinary:", publicId);
 
-        //   const deletionResult = await cloudinary.uploader.destroy(publicId);
-          console.log("Cloudinary Deletion Result:", deletionResult);
-          //   const publicId = user.profile_image
-          //     .split("/")
-          //     .slice(-3)
-          //     .join("/")
-          //     .split(".")
-          //     .slice(0, -1)
-          //     .join(".");
-
-          //   await cloudinary.uploader.destroy(publicId).then(()=>console.log("Deelted"));
+          if (publicId) {
+            let res = await cloudinary.uploader.destroy(publicId);
+            log(res);
+          }
         } catch (err) {
-          console.log("Old image delete failed:", err.message);
+          log("Old image delete failed:", err.message);
         }
       }
-      console.log(req.file);
+
       updateData.profile_image = req.file.path;
     }
 
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid fields provided to update",
+      });
+    }
+
     const updatedUser = await User.findByIdAndUpdate(req.user._id, updateData, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     }).populate("github_profile");
 

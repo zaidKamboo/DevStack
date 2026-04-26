@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const log = require("../src/utils/index.utils");
+const { log } = require( "../src/utils/index.utils" );
 const connectDB = () => {
   try {
     mongoose

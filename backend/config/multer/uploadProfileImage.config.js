@@ -11,7 +11,14 @@ const storage = new CloudinaryStorage({
       const mimeType = file.mimetype.split("/")[1];
       return formats.includes(mimeType) ? mimeType : "jpg";
     },
-    public_id: (_, file) => `${Date.now()}_${file.originalname}`,
+    public_id: (_, file) => {
+      const nameWithoutExt = file.originalname
+        .split(".")
+        .slice(0, -1)
+        .join(".");
+
+      return `${Date.now()}_${nameWithoutExt}`;
+    },
   },
 });
 

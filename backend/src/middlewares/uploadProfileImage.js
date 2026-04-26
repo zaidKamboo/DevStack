@@ -12,3 +12,5 @@ exports.uploadProfileImageMiddleware = (req, res, next) => {
     next();
   });
 };
+// exports.uploadProfileImageMiddleware =
+//   uploadAvatarConfig.single("profile-image");
