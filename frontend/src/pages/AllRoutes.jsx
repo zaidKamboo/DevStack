@@ -4,13 +4,15 @@ import Login from './Login';
 import Signup from './Signup';
 import { Routes, Route } from 'react-router-dom';
 import FeaturesPage from './FeaturesPage';
+import Dashboard from './Dashboard';
 
 const AllRoutes = () => {
     const routes = [
         { path: "/", component: <Home /> },
         { path: "/login", component: <Login /> },
         { path: "/signup", component: <Signup /> },
-        { path: "/features", component: <FeaturesPage /> }
+        { path: "/features", component: <FeaturesPage /> },
+        { path: "/dashboard", component: <Dashboard /> },
     ]
     return (
         <Routes>

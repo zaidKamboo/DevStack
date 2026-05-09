@@ -1,31 +1,99 @@
-const { geminiModel } = "../../config/gemini-model.setup";
+const groq = require("../../config/groq.config");
 
 exports.generateDevPersonality = async (data) => {
   try {
     const prompt = `
-        Act like a fun tech personality analyzer.
+You are an AI developer personality analyzer.
 
-    Return JSON:
+Analyze the developer based on the data.
 
+Return ONLY valid JSON.
+
+Format:
+
+{
+  "personality": "",
+  "description": "",
+  "strength": "",
+  "weakness": "",
+  "badge": "",
+  "insights": [
     {
-     "personality": "",
-     "description": "",
-     "strength": "",
-     "weakness": ""
+      "title": "",
+      "description": ""
     }
+  ]
+}
 
-        Data:
-        Repos: ${data.totalRepos}
-        Stars: ${data.totalStars}
-        Top Language: ${data.topLanguage}
-        `;
+Developer Data:
+- Total Repositories: ${data.totalRepos}
+- Total Stars: ${data.totalStars}
+- Top Language: ${data.topLanguage}
+- Followers: ${data.followers}
+`;
 
-    const result = await geminiModel.generateContent(prompt);
+    // 🔥 GROQ API CALL
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192",
 
-    const response = result.response.text();
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an AI developer personality analyzer that ONLY returns valid JSON.",
+        },
 
-    return response;
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+
+      temperature: 0.7,
+
+      max_tokens: 500,
+    });
+
+    // 🔥 RAW RESPONSE
+    const raw = completion.choices[0].message.content;
+
+    // 🔥 CLEAN JSON
+    const cleaned = raw
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    // 🔥 PARSE JSON
+    return JSON.parse(cleaned);
   } catch (err) {
-    return "🧠 Consistent Builder - Reliable developer with steady growth.";
+    console.log("AI PERSONALITY ERROR:", err.message);
+
+    // 🔥 FALLBACK RESPONSE
+    return {
+      personality: "Consistent Builder",
+
+      description: "Reliable developer with steady growth.",
+
+      strength: "Consistency and adaptability",
+
+      weakness: "May overfocus on perfection",
+
+      badge: "STEADY CODER",
+
+      insights: [
+        {
+          title: "Growth Pattern",
+
+          description: "Shows consistent repository activity.",
+        },
+
+        {
+          title: "Preferred Stack",
+
+          description:
+            "Strong inclination toward modern JavaScript ecosystems.",
+        },
+      ],
+    };
   }
 };

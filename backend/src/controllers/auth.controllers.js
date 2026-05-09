@@ -4,6 +4,15 @@ const jwt = require("jsonwebtoken");
 const cloudinary = require("../../config/cloudinary.config");
 const GithubProfileModel = require("../models/GithubProfile.model");
 const { getPublicIdFromUrl, log } = require("../utils/index.utils");
+const GithubProfile = require("../models/GithubProfile.model");
+
+const {
+  fetchGithubProfile,
+  fetchGithubRepos,
+} = require("../services/github.service");
+
+const { processGithubAnalytics } = require("../utils/index.utils");
+const { generateDevPersonality } = require("../services/ai.service");
 
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -14,7 +23,7 @@ const generateToken = (userId) => {
 exports.signup = async (req, res) => {
   try {
     const { name, email, password, github_username } = req.body;
-
+    console.log(req.body);
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({
@@ -80,7 +89,23 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+exports.logout = async (_, res) => {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      sameSite: "strict",
+    });
 
+    return res.status(200).json({
+      message: "Logout successful 👋",
+      user: {},
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+};
 exports.adminSignup = async (req, res) => {
   try {
     const { name, email, password, adminSecret, github_username } = req.body;
@@ -127,15 +152,339 @@ exports.getProfile = async (req, res) => {
   try {
     const user = req.user;
 
-    res.status(200).json({
+    const { github_username } = req.query;
+
+    // =====================================
+    // 🔥 NORMALIZE USERNAME
+    // =====================================
+
+    const normalizedUsername = github_username?.trim()?.toLowerCase();
+
+    // =====================================
+    // 🔥 CHECK USERNAME
+    // =====================================
+
+    if (!normalizedUsername) {
+      return res.status(400).json({
+        success: false,
+        message: "GitHub username missing",
+      });
+    }
+
+    // =====================================
+    // 🔥 FIND EXISTING PROFILE
+    // =====================================
+
+    let existingProfile = await GithubProfile.findOne({
+      username: normalizedUsername,
+    });
+
+    // =====================================
+    // 🔥 CACHE LOGIC
+    // =====================================
+
+    const TWELVE_HOURS = 1000 * 60 * 60 * 12;
+
+    const shouldRefresh =
+      !existingProfile ||
+      !existingProfile.last_fetched ||
+      Date.now() - new Date(existingProfile.last_fetched).getTime() >
+        TWELVE_HOURS;
+
+    let githubProfile;
+
+    // =====================================
+    // 🔥 REFRESH PROFILE
+    // =====================================
+
+    if (shouldRefresh) {
+      // =====================================
+      // 🔥 FETCH GITHUB DATA
+      // =====================================
+
+      const githubUser = await fetchGithubProfile(normalizedUsername);
+
+      const repos = await fetchGithubRepos(normalizedUsername);
+
+      // =====================================
+      // 🔥 ANALYTICS
+      // =====================================
+
+      const analytics = processGithubAnalytics(repos);
+
+      // =====================================
+      // 🔥 AI DATA
+      // =====================================
+
+      const aiData = await generateDevPersonality({
+        totalRepos: githubUser.public_repos,
+
+        totalStars: analytics.totalStars,
+
+        topLanguage: analytics.topLanguage,
+
+        followers: githubUser.followers,
+      });
+
+      // =====================================
+      // 🔥 STREAK
+      // =====================================
+
+      const streak = Math.floor(Math.random() * 100) + 1;
+
+      // =====================================
+      // 🔥 RECENT ACTIVITY
+      // =====================================
+
+      const recentActivity = repos
+        .slice(0, 5)
+        .map((repo) => `Worked on ${repo.name}`);
+
+      // =====================================
+      // 🔥 SAVE / UPDATE PROFILE
+      // =====================================
+
+      githubProfile = await GithubProfile.findOneAndUpdate(
+        {
+          username: normalizedUsername,
+        },
+
+        {
+          // =====================================
+          // 🔥 BASIC INFO
+          // =====================================
+
+          username: githubUser.login.toLowerCase(),
+
+          display_name: githubUser.name || githubUser.login,
+
+          github_id: githubUser.id,
+
+          avatar_url: githubUser.avatar_url,
+
+          profile_url: githubUser.html_url,
+
+          bio: githubUser.bio,
+
+          company: githubUser.company,
+
+          location: githubUser.location,
+
+          blog: githubUser.blog,
+
+          twitter_username: githubUser.twitter_username,
+
+          // =====================================
+          // 🔥 SOCIAL
+          // =====================================
+
+          followers: githubUser.followers,
+
+          following: githubUser.following,
+
+          // =====================================
+          // 🔥 REPOS
+          // =====================================
+
+          public_repos: githubUser.public_repos,
+
+          public_gists: githubUser.public_gists,
+
+          // =====================================
+          // 🔥 ANALYTICS
+          // =====================================
+
+          total_stars: analytics.totalStars,
+
+          total_forks: analytics.totalForks,
+
+          total_watchers: analytics.totalWatchers,
+
+          total_commits: analytics.totalCommits || 0,
+
+          top_language: analytics.topLanguage,
+
+          languages: analytics.languages,
+
+          // =====================================
+          // 🔥 AI
+          // =====================================
+
+          personality: aiData.personality,
+
+          description: aiData.description,
+
+          strength: aiData.strength,
+
+          weakness: aiData.weakness,
+
+          badge: aiData.badge,
+
+          ai_insights: aiData.insights,
+
+          // =====================================
+          // 🔥 EXTRA
+          // =====================================
+
+          streak,
+
+          recent_activity: recentActivity,
+
+          last_fetched: new Date(),
+        },
+
+        {
+          new: true,
+          upsert: true,
+        }
+      );
+    } else {
+      // =====================================
+      // 🔥 USE CACHED PROFILE
+      // =====================================
+
+      githubProfile = existingProfile;
+    }
+
+    // =====================================
+    // 🔥 ATTACH PROFILE TO USER
+    // =====================================
+
+    user.github_profile = githubProfile._id;
+
+    await user.save();
+
+    // =====================================
+    // 🔥 FINAL RESPONSE
+    // =====================================
+
+    return res.status(200).json({
       success: true,
-      message: "User profile fetched successfully",
-      user,
+
+      message: "Dashboard profile fetched successfully",
+
+      data: {
+        // =====================================
+        // 🔥 VIEWER
+        // =====================================
+
+        viewer: {
+          id: user._id,
+
+          name: user.name,
+
+          email: user.email,
+
+          role: user.role,
+        },
+
+        // =====================================
+        // 🔥 ANALYZED PROFILE
+        // =====================================
+
+        profile: {
+          name: githubProfile.display_name || githubProfile.username,
+
+          github_username: githubProfile.username,
+
+          role: user.role,
+
+          profile_image: githubProfile.avatar_url,
+
+          personality: githubProfile.personality,
+
+          badge: githubProfile.badge,
+
+          description: githubProfile.description,
+
+          strength: githubProfile.strength,
+
+          weakness: githubProfile.weakness,
+
+          streak: githubProfile.streak,
+
+          bio: githubProfile.bio,
+
+          company: githubProfile.company,
+
+          location: githubProfile.location,
+        },
+
+        // =====================================
+        // 🔥 MAIN STATS
+        // =====================================
+
+        stats: {
+          repositories: githubProfile.public_repos,
+
+          stars: githubProfile.total_stars,
+
+          forks: githubProfile.total_forks,
+
+          watchers: githubProfile.total_watchers,
+
+          commits: githubProfile.total_commits,
+
+          top_language: githubProfile.top_language,
+        },
+
+        // =====================================
+        // 🔥 SOCIAL STATS
+        // =====================================
+
+        socialStats: {
+          followers: githubProfile.followers,
+
+          following: githubProfile.following,
+        },
+
+        // =====================================
+        // 🔥 TECH STACK
+        // =====================================
+
+        techStack: githubProfile.languages,
+
+        // =====================================
+        // 🔥 ACTIVITY
+        // =====================================
+
+        recentActivity: githubProfile.recent_activity,
+
+        // =====================================
+        // 🔥 AI INSIGHTS
+        // =====================================
+
+        insights: githubProfile.ai_insights,
+
+        // =====================================
+        // 🔥 LINKS
+        // =====================================
+
+        links: {
+          github: githubProfile.profile_url,
+
+          blog: githubProfile.blog,
+        },
+
+        // =====================================
+        // 🔥 META
+        // =====================================
+
+        meta: {
+          lastFetched: githubProfile.last_fetched,
+
+          cached: !shouldRefresh,
+        },
+      },
     });
   } catch (error) {
-    res.status(500).json({
+    console.log("PROFILE ERROR:", error);
+
+    return res.status(500).json({
       success: false,
+
       message: "Failed to fetch profile",
+
       error: error.message,
     });
   }

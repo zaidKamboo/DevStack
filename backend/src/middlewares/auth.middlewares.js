@@ -5,33 +5,66 @@ exports.isLoggedIn = async (req, res, next) => {
   try {
     let token;
 
-    if (req.cookies?.token) token = req.cookies.token;
+    // =====================================
+    // 🔥 TOKEN
+    // =====================================
 
-    if (!token && req.headers.authorization?.startsWith("Bearer"))
+    if (req.cookies?.token) {
+      token = req.cookies.token;
+    }
+
+    if (!token && req.headers.authorization?.startsWith("Bearer")) {
       token = req.headers.authorization.split(" ")[1];
+    }
 
-    if (!token)
+    if (!token) {
       return res.status(401).json({
+        success: false,
         message: "Login required",
       });
+    }
+
+    // =====================================
+    // 🔥 VERIFY JWT
+    // =====================================
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(decoded.id).populate({
-      path: "github_profile",
-      select: "username public_repos avatar_url profile_url",
-    });
+    // =====================================
+    // 🔥 GET USER
+    // =====================================
 
-    if (!user)
+    const user = await User.findById(decoded.id)
+
+      .populate({
+        path: "github_profile",
+      })
+
+      .select("-password");
+
+    // =====================================
+    // 🔥 USER NOT FOUND
+    // =====================================
+
+    if (!user) {
       return res.status(401).json({
+        success: false,
         message: "User not found",
       });
+    }
+
+    // =====================================
+    // 🔥 APPEND USER
+    // =====================================
 
     req.user = user;
 
     next();
   } catch (error) {
-    res.status(401).json({
+    console.log("AUTH ERROR:", error.message);
+
+    return res.status(401).json({
+      success: false,
       message: "Invalid or expired token",
     });
   }

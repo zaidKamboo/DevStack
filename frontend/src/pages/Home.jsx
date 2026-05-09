@@ -9,7 +9,7 @@ import HowItWorks from "../components/home/HowItWorks";
 
 const Landing = () => {
     return (
-        <div className="bg-radial-dark text-white">
+        <div className="bg-radial-dark text-white overflow-x-hidden">
             <Navbar />
             <Hero />
             <Features />

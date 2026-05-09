@@ -17,4 +17,37 @@ const getPublicIdFromUrl = (url) => {
     return null;
   }
 };
-module.exports = {  log, getPublicIdFromUrl };
+processGithubAnalytics = (repos) => {
+  let totalStars = 0;
+  let totalForks = 0;
+  let totalWatchers = 0;
+
+  const languageMap = {};
+
+  repos.forEach((repo) => {
+    totalStars += repo.stargazers_count;
+    totalForks += repo.forks_count;
+    totalWatchers += repo.watchers_count;
+
+    if (repo.language) {
+      languageMap[repo.language] = (languageMap[repo.language] || 0) + 1;
+    }
+  });
+
+  const languages = Object.entries(languageMap).map(([name, value]) => ({
+    name,
+    value,
+  }));
+
+  const topLanguage =
+    languages.sort((a, b) => b.value - a.value)[0]?.name || "JavaScript";
+
+  return {
+    totalStars,
+    totalForks,
+    totalWatchers,
+    languages,
+    topLanguage,
+  };
+};
+module.exports = { log, getPublicIdFromUrl, processGithubAnalytics };

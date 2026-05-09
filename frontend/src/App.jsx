@@ -1,9 +1,25 @@
-import React from 'react'
+
+import AllRoutes from "./pages/AllRoutes";
+import { Toaster } from "react-hot-toast";
 
 const App = () => {
   return (
-    <div>App</div>
-  )
-}
+    <>
+      <Toaster
+        position="top-right"
+        toastOptions={ {
+          style: {
+            background: "#0f172a",
+            color: "#22c55e",
+            border: "1px solid #22c55e",
+          },
+        } }
+      />
 
-export default App
+      {/* Routes */ }
+      <AllRoutes />
+    </>
+  );
+};
+
+export default App;

@@ -1,173 +1,205 @@
-import React, { useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Tilt from "react-parallax-tilt";
+import {
+    AreaChart, Area,
+    BarChart, Bar,
+    LineChart, Line,
+    PieChart, Pie, Cell,
+    XAxis, YAxis, Tooltip,
+    ResponsiveContainer
+} from "recharts";
 
 import {
     FaCode,
     FaStar,
     FaProjectDiagram,
+    FaBug,
+    FaChartPie,
+    FaGitAlt
 } from "react-icons/fa";
-import { HiSparkles } from "react-icons/hi";
 import { FiTrendingUp } from "react-icons/fi";
+import { HiSparkles } from "react-icons/hi";
 
-gsap.registerPlugin( ScrollTrigger );
+const green = "#22c55e";
 
-const stats = [
-    { icon: <FaCode />, label: "Primary", value: "JavaScript" },
-    { icon: <FaProjectDiagram />, label: "Repos", value: "42" },
-    { icon: <FaStar />, label: "Stars", value: "128" },
-    { icon: <FiTrendingUp />, label: "Activity", value: "High" },
-    { icon: <HiSparkles />, label: "Score", value: "8.5/10" },
+// 🔥 Sample Data
+const commitsData = [
+    { name: "Jan", value: 20 },
+    { name: "Feb", value: 40 },
+    { name: "Mar", value: 30 },
+    { name: "Apr", value: 60 },
+];
+
+const barData = [
+    { name: "A", value: 10 },
+    { name: "B", value: 30 },
+    { name: "C", value: 20 },
+];
+
+const pieData = [
+    { name: "JS", value: 60 },
+    { name: "Python", value: 25 },
+    { name: "Other", value: 15 },
+];
+
+// 🔥 Chart Config with Icons
+const charts = [
+    { title: "Commits", type: "area", data: commitsData, icon: <FaGitAlt /> },
+    { title: "Stars", type: "line", data: commitsData, icon: <FaStar /> },
+    { title: "Repos", type: "bar", data: barData, icon: <FaProjectDiagram /> },
+    { title: "PRs", type: "area", data: commitsData, icon: <FiTrendingUp /> },
+    { title: "Issues", type: "bar", data: barData, icon: <FaBug /> },
+    { title: "Languages", type: "pie", data: pieData, icon: <FaChartPie /> },
 ];
 
 const Demo = () => {
-    const sectionRef = useRef( null );
+    const [ activeChart, setActiveChart ] = useState( null );
 
-    useEffect( () => {
-        const ctx = gsap.context( () => {
+    const renderChart = ( type, data, full = false ) => {
+        switch ( type ) {
+            case "area":
+                return (
+                    <AreaChart data={ data }>
+                        { full && <XAxis dataKey="name" stroke="#888" /> }
+                        { full && <YAxis /> }
+                        <Tooltip />
+                        <Area
+                            type="monotone"
+                            dataKey="value"
+                            stroke={ green }
+                            fill="rgba(34,197,94,0.2)"
+                        />
+                    </AreaChart>
+                );
 
-            const tl = gsap.timeline( {
-                scrollTrigger: {
-                    trigger: sectionRef.current,
-                    start: "top top",
-                    end: "+=800",
-                    scrub: 1,
-                    pin: true,
-                    anticipatePin: 1,
-                },
-            } );
+            case "bar":
+                return (
+                    <BarChart data={ data }>
+                        { full && <XAxis dataKey="name" stroke="#888" /> }
+                        { full && <YAxis /> }
+                        <Tooltip />
+                        <Bar dataKey="value" fill={ green } />
+                    </BarChart>
+                );
 
-            // 🔥 Card enters
-            tl.from( ".demo-card", {
-                opacity: 0,
-                y: 120,
-                scale: 0.9,
-                duration: 1,
-                ease: "power2.out",
-            } );
+            case "line":
+                return (
+                    <LineChart data={ data }>
+                        { full && <XAxis dataKey="name" stroke="#888" /> }
+                        { full && <YAxis /> }
+                        <Tooltip />
+                        <Line dataKey="value" stroke={ green } />
+                    </LineChart>
+                );
 
-            // 🔥 Stats stagger
-            tl.from( ".stat-item", {
-                opacity: 0,
-                y: 50,
-                stagger: 0.15,
-                duration: 0.6,
-            } );
+            case "pie":
+                return (
+                    <PieChart>
+                        <Tooltip />
+                        <Pie
+                            data={ data }
+                            dataKey="value"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={ full ? 100 : 55 }
+                            label
+                        >
+                            { data.map( ( _, i ) => (
+                                <Cell key={ i } fill={ green } />
+                            ) ) }
+                        </Pie>
+                    </PieChart>
+                );
 
-            // 🔥 Personality reveal
-            tl.from( ".personality", {
-                opacity: 0,
-                scale: 0.8,
-                duration: 0.6,
-            } );
-
-        }, sectionRef );
-
-        return () => ctx.revert();
-    }, [] );
+            default:
+                return null;
+        }
+    };
 
     return (
-        <section
-            ref={ sectionRef }
-            className="min-h-screen flex flex-col justify-center items-center px-4 bg-black text-white relative overflow-hidden py-10"
-        >
+        <section className="min-h-screen flex flex-col items-center justify-center px-4 bg-black text-white py-10">
 
-            {/* Background */ }
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.15),transparent_60%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(0,0,0,0.95))]" />
+            {/* 🔥 Heading */ }
+            <h2 className="text-3xl md:text-4xl font-bold mb-8 text-green-400 text-center flex items-center gap-2">
+                <HiSparkles className="text-green-400 text-xl" />
+                Dev Analytics Dashboard
+            </h2>
 
-            {/* Glow Orbs */ }
-            <div className="absolute top-20 left-10 w-72 h-72 bg-green-500/10 blur-3xl" />
-            <div className="absolute bottom-20 right-10 w-72 h-72 bg-green-400/10 blur-3xl" />
+            {/* 🔥 CARD */ }
+            <Tilt className="w-full max-w-5xl">
+                <div className="bg-black/60 backdrop-blur-xl border border-green-500/20 rounded-xl p-5 shadow-[0_0_40px_rgba(34,197,94,0.2)]">
 
-            {/* Heading */ }
-            <motion.h2
-                initial={ { opacity: 0, y: -40 } }
-                whileInView={ { opacity: 1, y: 0 } }
-                transition={ { duration: 0.8 } }
-                className="text-4xl md:text-5xl font-bold mb-12 text-center z-10"
-            >
-                <span className="text-green-400 drop-shadow-[0_0_20px_rgba(34,197,94,0.8)]">
-                    Your Dev Report 📊
-                </span>
-            </motion.h2>
+                    {/* GRID */ }
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
 
-            {/* CARD */ }
-            <div className="demo-card relative z-10 group w-full max-w-3xl">
-
-                {/* Glow Border */ }
-                <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-br from-green-500/40 via-transparent to-green-500/20 blur-sm opacity-70 group-hover:opacity-100 transition" />
-
-                <div className="relative bg-black/70 backdrop-blur-2xl border border-green-500/20 rounded-2xl p-6 md:p-8
-          shadow-[0_0_40px_rgba(34,197,94,0.2)]
-          group-hover:shadow-[0_0_100px_rgba(34,197,94,0.4)]
-          transition duration-500
-          transform group-hover:-translate-y-2 group-hover:scale-[1.01]"
-                >
-
-                    {/* HEADER */ }
-                    <div className="flex items-center gap-4 border-b border-green-500/20 pb-5 mb-6">
-
-                        <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold text-lg shadow-[0_0_20px_rgba(34,197,94,0.5)]">
-                            R
-                        </div>
-
-                        <div>
-                            <h3 className="text-xl font-semibold">Rahul</h3>
-                            <p className="text-gray-500 text-sm">@rahul-dev</p>
-                        </div>
-
-                    </div>
-
-                    {/* STATS */ }
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-
-                        { stats.map( ( item, i ) => (
-                            <div
+                        { charts.map( ( chart, i ) => (
+                            <motion.div
                                 key={ i }
-                                className="stat-item p-4 rounded-xl bg-black/40 border border-green-500/10
-                shadow-[inset_0_0_20px_rgba(34,197,94,0.05)]"
+                                whileHover={ { scale: 1.06 } }
+                                onClick={ () => setActiveChart( chart ) }
+                                className="cursor-pointer bg-black/40 p-4 rounded-lg border border-green-500/10
+                hover:shadow-[0_0_30px_rgba(34,197,94,0.4)] transition"
                             >
-                                <div className="text-green-400 text-lg mb-2">
-                                    { item.icon }
+                                {/* 🔥 ICON + TITLE */ }
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2 text-green-400 text-sm">
+                                        { chart.icon }
+                                        <span>{ chart.title }</span>
+                                    </div>
                                 </div>
 
-                                <p className="text-xs text-gray-500">{ item.label }</p>
-                                <p className="font-semibold text-sm">{ item.value }</p>
-                            </div>
+                                <div className="h-24 md:h-28">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        { renderChart( chart.type, chart.data ) }
+                                    </ResponsiveContainer>
+                                </div>
+                            </motion.div>
                         ) ) }
 
                     </div>
 
-                    {/* Divider */ }
-                    <div className="my-6 h-px bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
-
-                    {/* Personality */ }
-                    <div className="text-center personality">
-                        <p className="text-gray-500 text-sm">Developer Personality</p>
-                        <p className="text-green-400 text-lg font-semibold mt-2">
-                            Night Owl Debugger 🌙
-                        </p>
-                    </div>
-
-                    {/* CTA */ }
-                    <div className="mt-6 flex justify-center">
-                        <button className="px-6 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium shadow-[0_0_20px_rgba(34,197,94,0.4)] transition">
-                            Download Dev Card 🚀
-                        </button>
-                    </div>
-
                 </div>
-            </div>
+            </Tilt>
 
-            {/* Footer Text */ }
-            <p className="mt-8 text-gray-500 text-sm text-center z-10">
-                Generate your own developer report and share it 🚀
+            {/* 🔥 MODAL */ }
+            { activeChart && (
+                <div
+                    className="fixed inset-0 bg-black/80 backdrop-blur flex items-center justify-center z-50 px-4"
+                    onClick={ () => setActiveChart( null ) }
+                >
+                    <div
+                        className="bg-black border border-green-500/30 rounded-xl p-6 w-full max-w-2xl"
+                        onClick={ ( e ) => e.stopPropagation() }
+                    >
+
+                        <h3 className="text-green-400 text-lg mb-4 flex items-center gap-2">
+                            { activeChart.icon }
+                            { activeChart.title } Details
+                        </h3>
+
+                        <p className="text-xs text-gray-400 mb-4">
+                            X-Axis: Time / Categories <br />
+                            Y-Axis: Activity / Count
+                        </p>
+
+                        <div className="h-64 md:h-80">
+                            <ResponsiveContainer width="100%" height="100%">
+                                { renderChart( activeChart.type, activeChart.data, true ) }
+                            </ResponsiveContainer>
+                        </div>
+
+                    </div>
+                </div>
+            ) }
+
+            {/* Footer */ }
+            <p className="mt-6 text-gray-500 text-xs text-center">
+                Share your DevStack report 🚀
             </p>
 
         </section>
     );
 };
 
-export default Demo;
+export default Demo;    
