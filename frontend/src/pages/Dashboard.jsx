@@ -9,7 +9,7 @@ import {
     FaGithub,
     FaStar,
     FaTrophy,
-    FaUsers,
+    FaShareAlt,
     FaFire,
     FaCodeBranch,
     FaCrown,
@@ -217,10 +217,13 @@ const Dashboard = () => {
 
     return (
         <div
+            id="print-area"
             ref={ ref }
             className="relative bg-black text-white min-h-screen overflow-hidden px-4 sm:px-6 lg:px-8 py-6"
         >
-            <Navbar />
+            <div className="no-print">
+                <Navbar />
+            </div>
             {/* ===================================== */ }
             {/* BACKGROUND */ }
             {/* ===================================== */ }
@@ -1324,7 +1327,78 @@ const Dashboard = () => {
                 </div>
 
             </div>
-            <Footer />
+            {/* ===================================== */ }
+            {/* 🔥 SHARE / PRINT BUTTON */ }
+            {/* ===================================== */ }
+
+            <div className="fade-up flex justify-center mt-10 mb-6">
+
+                <motion.button
+                    whileHover={ {
+                        scale: 1.04,
+                        y: -3,
+                    } }
+
+                    whileTap={ {
+                        scale: 0.96,
+                    } }
+
+                    onClick={ () => window.print() }
+
+                    className="
+        relative overflow-hidden
+        flex items-center gap-3
+        px-8 py-4
+        rounded-full
+        bg-gradient-to-r
+        from-[#14532d]
+        via-[#22c55e]
+        to-[#4ade80]
+        text-black
+        font-semibold
+        shadow-[0_0_40px_rgba(34,197,94,0.35)]
+        transition-all duration-300
+        "
+                >
+
+                    {/* 🔥 SHINE EFFECT */ }
+
+                    <motion.div
+                        animate={ {
+                            x: [ "-120%", "220%" ],
+                        } }
+
+                        transition={ {
+                            repeat: Infinity,
+                            duration: 3,
+                            ease: "linear",
+                        } }
+
+                        className="absolute top-0 left-0 h-full w-20 bg-white/20 blur-md rotate-12"
+                    />
+
+                    {/* 🔥 ICON */ }
+
+                    <div className="relative z-10">
+
+                        <FaShareAlt className="text-[18px]" />
+
+                    </div>
+
+                    {/* 🔥 TEXT */ }
+
+                    <span className="relative z-10 tracking-wide">
+
+                        Share Developer Report
+
+                    </span>
+
+                </motion.button>
+
+            </div>
+            <div className="no-print">
+                <Footer />
+            </div>
         </div>
     );
 };

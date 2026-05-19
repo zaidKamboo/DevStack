@@ -179,7 +179,7 @@ const Footer = () => {
 
                     <ul className="space-y-3">
 
-                        { [ "Home", "Features", "Analyze" ].map(
+                        { [ "Home", "Features"].map(
                             ( item, i ) => (
 
                                 <motion.li
@@ -234,7 +234,7 @@ const Footer = () => {
                         delay: 0.2,
                     } }
                 >
-
+                    Analyze
                     <h3 className="text-green-400 font-semibold mb-5 flex items-center gap-3 justify-center sm:justify-start text-lg">
 
                         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-black via-[#052e16] to-[#22c55e]/20 border border-green-500/20 flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.2)]">
