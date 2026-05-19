@@ -150,26 +150,53 @@ exports.adminSignup = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const user = req.user;
+    // =====================================
+    // 🔥 OPTIONAL AUTH USER
+    // =====================================
 
-    const { github_username } = req.query;
+    let user = null;
+
+    if (req.user?._id) {
+      user = await User.findById(req.user._id);
+
+      // =====================================
+      // 🔥 INVALID TOKEN USER
+      // =====================================
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid authenticated user",
+        });
+      }
+    }
+
+    // =====================================
+    // 🔥 USERNAME RESOLUTION
+    // =====================================
+
+    // Priority:
+    // 1️⃣ req.query.github_username
+    // 2️⃣ req.user.github_username
+
+    const githubUsername = req.query?.github_username || user?.github_username;
+
+    // =====================================
+    // 🔥 USERNAME CHECK
+    // =====================================
+
+    if (!githubUsername) {
+      return res.status(400).json({
+        success: false,
+        message: "GitHub username missing from query and authenticated user",
+      });
+    }
 
     // =====================================
     // 🔥 NORMALIZE USERNAME
     // =====================================
 
-    const normalizedUsername = github_username?.trim()?.toLowerCase();
-
-    // =====================================
-    // 🔥 CHECK USERNAME
-    // =====================================
-
-    if (!normalizedUsername) {
-      return res.status(400).json({
-        success: false,
-        message: "GitHub username missing",
-      });
-    }
+    const normalizedUsername = githubUsername.trim().toLowerCase();
 
     // =====================================
     // 🔥 FIND EXISTING PROFILE
@@ -199,35 +226,63 @@ exports.getProfile = async (req, res) => {
 
     if (shouldRefresh) {
       // =====================================
-      // 🔥 FETCH GITHUB DATA
+      // 🔥 FETCH GITHUB USER
       // =====================================
 
       const githubUser = await fetchGithubProfile(normalizedUsername);
 
+      // =====================================
+      // 🔥 USER NOT FOUND
+      // =====================================
+
+      if (!githubUser) {
+        return res.status(404).json({
+          success: false,
+          message: "GitHub user not found",
+        });
+      }
+
+      // =====================================
+      // 🔥 FETCH REPOSITORIES
+      // =====================================
+
       const repos = await fetchGithubRepos(normalizedUsername);
 
       // =====================================
-      // 🔥 ANALYTICS
+      // 🔥 REPO CHECK
       // =====================================
 
-      const analytics = processGithubAnalytics(repos);
+      if (!Array.isArray(repos)) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to fetch repositories",
+        });
+      }
 
       // =====================================
-      // 🔥 AI DATA
+      // 🔥 PROCESS ANALYTICS
+      // =====================================
+
+      const analytics = processGithubAnalytics(repos || []);
+
+      // =====================================
+      // 🔥 AI PERSONALITY
       // =====================================
 
       const aiData = await generateDevPersonality({
-        totalRepos: githubUser.public_repos,
+        username: githubUser.login || normalizedUsername,
 
-        totalStars: analytics.totalStars,
+        totalRepos: githubUser.public_repos || 0,
 
-        topLanguage: analytics.topLanguage,
+        totalStars: analytics.totalStars || 0,
 
-        followers: githubUser.followers,
+        topLanguage: analytics.topLanguage || "JavaScript",
+
+        followers: githubUser.followers || 0,
       });
 
       // =====================================
-      // 🔥 STREAK
+      // 🔥 RANDOM STREAK
       // =====================================
 
       const streak = Math.floor(Math.random() * 100) + 1;
@@ -236,9 +291,8 @@ exports.getProfile = async (req, res) => {
       // 🔥 RECENT ACTIVITY
       // =====================================
 
-      const recentActivity = repos
-        .slice(0, 5)
-        .map((repo) => `Worked on ${repo.name}`);
+      const recentActivity =
+        repos?.slice(0, 5)?.map((repo) => `Worked on ${repo.name}`) || [];
 
       // =====================================
       // 🔥 SAVE / UPDATE PROFILE
@@ -254,7 +308,7 @@ exports.getProfile = async (req, res) => {
           // 🔥 BASIC INFO
           // =====================================
 
-          username: githubUser.login.toLowerCase(),
+          username: githubUser.login?.toLowerCase(),
 
           display_name: githubUser.name || githubUser.login,
 
@@ -283,7 +337,7 @@ exports.getProfile = async (req, res) => {
           following: githubUser.following,
 
           // =====================================
-          // 🔥 REPOS
+          // 🔥 REPOSITORIES
           // =====================================
 
           public_repos: githubUser.public_repos,
@@ -294,33 +348,33 @@ exports.getProfile = async (req, res) => {
           // 🔥 ANALYTICS
           // =====================================
 
-          total_stars: analytics.totalStars,
+          total_stars: analytics.totalStars || 0,
 
-          total_forks: analytics.totalForks,
+          total_forks: analytics.totalForks || 0,
 
-          total_watchers: analytics.totalWatchers,
+          total_watchers: analytics.totalWatchers || 0,
 
           total_commits: analytics.totalCommits || 0,
 
-          top_language: analytics.topLanguage,
+          top_language: analytics.topLanguage || "Unknown",
 
-          languages: analytics.languages,
+          languages: analytics.languages || [],
 
           // =====================================
-          // 🔥 AI
+          // 🔥 AI DATA
           // =====================================
 
-          personality: aiData.personality,
+          personality: aiData?.personality || "Consistent Builder",
 
-          description: aiData.description,
+          description: aiData?.description || "",
 
-          strength: aiData.strength,
+          strength: aiData?.strength || "",
 
-          weakness: aiData.weakness,
+          weakness: aiData?.weakness || "",
 
-          badge: aiData.badge,
+          badge: aiData?.badge || "DEV",
 
-          ai_insights: aiData.insights,
+          ai_insights: aiData?.insights || [],
 
           // =====================================
           // 🔥 EXTRA
@@ -334,10 +388,22 @@ exports.getProfile = async (req, res) => {
         },
 
         {
-          new: true,
+          returnDocument: "after",
+
           upsert: true,
         }
       );
+
+      // =====================================
+      // 🔥 SAVE FAILURE CHECK
+      // =====================================
+
+      if (!githubProfile) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to save GitHub profile",
+        });
+      }
     } else {
       // =====================================
       // 🔥 USE CACHED PROFILE
@@ -347,12 +413,25 @@ exports.getProfile = async (req, res) => {
     }
 
     // =====================================
+    // 🔥 FINAL PROFILE CHECK
+    // =====================================
+
+    if (!githubProfile) {
+      return res.status(500).json({
+        success: false,
+        message: "GitHub profile unavailable",
+      });
+    }
+
+    // =====================================
     // 🔥 ATTACH PROFILE TO USER
     // =====================================
 
-    user.github_profile = githubProfile._id;
+    if (user) {
+      user.github_profile = githubProfile._id;
 
-    await user.save();
+      await user.save();
+    }
 
     // =====================================
     // 🔥 FINAL RESPONSE
@@ -368,18 +447,22 @@ exports.getProfile = async (req, res) => {
         // 🔥 VIEWER
         // =====================================
 
-        viewer: {
-          id: user._id,
+        viewer: user
+          ? {
+              id: user._id,
 
-          name: user.name,
+              name: user.name,
 
-          email: user.email,
+              email: user.email,
 
-          role: user.role,
-        },
+              role: user.role,
+
+              github_username: user.github_username,
+            }
+          : null,
 
         // =====================================
-        // 🔥 ANALYZED PROFILE
+        // 🔥 PROFILE
         // =====================================
 
         profile: {
@@ -387,7 +470,7 @@ exports.getProfile = async (req, res) => {
 
           github_username: githubProfile.username,
 
-          role: user.role,
+          role: user?.role || "visitor",
 
           profile_image: githubProfile.avatar_url,
 
@@ -429,7 +512,7 @@ exports.getProfile = async (req, res) => {
         },
 
         // =====================================
-        // 🔥 SOCIAL STATS
+        // 🔥 SOCIAL
         // =====================================
 
         socialStats: {
@@ -442,19 +525,19 @@ exports.getProfile = async (req, res) => {
         // 🔥 TECH STACK
         // =====================================
 
-        techStack: githubProfile.languages,
+        techStack: githubProfile.languages || [],
 
         // =====================================
-        // 🔥 ACTIVITY
+        // 🔥 RECENT ACTIVITY
         // =====================================
 
-        recentActivity: githubProfile.recent_activity,
+        recentActivity: githubProfile.recent_activity || [],
 
         // =====================================
         // 🔥 AI INSIGHTS
         // =====================================
 
-        insights: githubProfile.ai_insights,
+        insights: githubProfile.ai_insights || [],
 
         // =====================================
         // 🔥 LINKS

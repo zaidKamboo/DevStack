@@ -113,9 +113,9 @@ const HowItWorks = () => {
                         <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-br from-green-500/25 via-transparent to-green-500/20 blur-sm opacity-70 group-hover:opacity-100 transition" />
 
                         <div className="relative h-full bg-black/60 backdrop-blur-xl rounded-2xl p-6 border border-green-500/10
-              shadow-[0_0_25px_rgba(34,197,94,0.15)]
-              group-hover:shadow-[0_0_70px_rgba(34,197,94,0.3)]
-              transition duration-500"
+                shadow-[0_0_25px_rgba(34,197,94,0.15)]
+                group-hover:shadow-[0_0_70px_rgba(34,197,94,0.3)]
+                transition duration-500"
                         >
                             <div className="text-[10px] text-gray-600 mb-3 tracking-[0.2em]">
                                 STEP { i + 1 }

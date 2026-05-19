@@ -61,14 +61,30 @@ const Demo = () => {
             case "area":
                 return (
                     <AreaChart data={ data }>
+                        <defs>
+                            <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#22c55e" stopOpacity={ 1 } />
+                                <stop offset="100%" stopColor="#000000" stopOpacity={ 0.1 } />
+                            </linearGradient>
+                        </defs>
+
                         { full && <XAxis dataKey="name" stroke="#888" /> }
                         { full && <YAxis /> }
-                        <Tooltip />
+
+                        <Tooltip
+                            contentStyle={ {
+                                background: "#000",
+                                border: "1px solid #22c55e",
+                                boxShadow: "0 0 20px rgba(34,197,94,0.5)"
+                            } }
+                        />
+
                         <Area
                             type="monotone"
                             dataKey="value"
-                            stroke={ green }
-                            fill="rgba(34,197,94,0.2)"
+                            stroke="#22c55e"
+                            strokeWidth={ 3 }
+                            fill="url(#greenGradient)"
                         />
                     </AreaChart>
                 );
@@ -76,27 +92,91 @@ const Demo = () => {
             case "bar":
                 return (
                     <BarChart data={ data }>
+                        <defs>
+                            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#22c55e" />
+                                <stop offset="100%" stopColor="#000000" />
+                            </linearGradient>
+                        </defs>
+
                         { full && <XAxis dataKey="name" stroke="#888" /> }
                         { full && <YAxis /> }
-                        <Tooltip />
-                        <Bar dataKey="value" fill={ green } />
+
+                        <Tooltip
+                            contentStyle={ {
+                                background: "#000",
+                                border: "1px solid #22c55e",
+                                boxShadow: "0 0 20px rgba(34,197,94,0.5)"
+                            } }
+                        />
+
+                        <Bar
+                            dataKey="value"
+                            fill="url(#barGradient)"
+                            radius={ [ 10, 10, 0, 0 ] }
+                        />
                     </BarChart>
                 );
 
             case "line":
                 return (
                     <LineChart data={ data }>
+                        <defs>
+                            <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#000000" />
+                                <stop offset="100%" stopColor="#22c55e" />
+                            </linearGradient>
+                        </defs>
+
                         { full && <XAxis dataKey="name" stroke="#888" /> }
                         { full && <YAxis /> }
-                        <Tooltip />
-                        <Line dataKey="value" stroke={ green } />
+
+                        <Tooltip
+                            contentStyle={ {
+                                background: "#000",
+                                border: "1px solid #22c55e",
+                                boxShadow: "0 0 20px rgba(34,197,94,0.5)"
+                            } }
+                        />
+
+                        <Line
+                            dataKey="value"
+                            stroke="url(#lineGradient)"
+                            strokeWidth={ 4 }
+                            dot={ {
+                                r: 5,
+                                fill: "#22c55e",
+                                stroke: "#22c55e"
+                            } }
+                            activeDot={ {
+                                r: 8,
+                                fill: "#22c55e",
+                                style: {
+                                    filter: "drop-shadow(0px 0px 12px #22c55e)"
+                                }
+                            } }
+                        />
                     </LineChart>
                 );
 
             case "pie":
                 return (
                     <PieChart>
-                        <Tooltip />
+                        <defs>
+                            <linearGradient id="pieGradient" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#22c55e" />
+                                <stop offset="100%" stopColor="#000000" />
+                            </linearGradient>
+                        </defs>
+
+                        <Tooltip
+                            contentStyle={ {
+                                background: "#000",
+                                border: "1px solid #22c55e",
+                                boxShadow: "0 0 20px rgba(34,197,94,0.5)"
+                            } }
+                        />
+
                         <Pie
                             data={ data }
                             dataKey="value"
@@ -106,7 +186,13 @@ const Demo = () => {
                             label
                         >
                             { data.map( ( _, i ) => (
-                                <Cell key={ i } fill={ green } />
+                                <Cell
+                                    key={ i }
+                                    fill="url(#pieGradient)"
+                                    style={ {
+                                        filter: "drop-shadow(0px 0px 8px rgba(34,197,94,0.7))"
+                                    } }
+                                />
                             ) ) }
                         </Pie>
                     </PieChart>

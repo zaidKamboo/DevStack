@@ -12,7 +12,7 @@ const {
   uploadProfileImageMiddleware,
 } = require("../../middlewares/uploadProfileImage");
 
-router.get("/profile", isLoggedIn, getProfile);
+router.get("/profile", getProfile);
 
 router.put("/profile", isLoggedIn, uploadProfileImageMiddleware, updateProfile);
 
